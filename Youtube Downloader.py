@@ -1,10 +1,11 @@
 import sys
 import colorama
-from colorama import Fore, Back, Style
+from colorama import Fore, Style
 from pytube import YouTube
 from prettytable import PrettyTable
+import subprocess
 from winreg import *
-from moviepy.editor import *
+import os
 
 
 # Example Link: https://youtu.be/LXb3EKWsInQ
@@ -47,11 +48,11 @@ def display_information(video):
 def display_streams(video):
     print(Fore.YELLOW + 'Video Streams: ' + Style.RESET_ALL)
     print_table = PrettyTable([Fore.YELLOW + 'File Type' + Style.RESET_ALL,
-                              Fore.YELLOW + 'ID' + Style.RESET_ALL,
-                              Fore.YELLOW + 'Resolution' + Style.RESET_ALL,
-                              Fore.YELLOW + 'FPS' + Style.RESET_ALL,
-                              Fore.YELLOW + 'Audio Bitrate' + Style.RESET_ALL,
-                              Fore.YELLOW + 'Extension' + Style.RESET_ALL])
+                               Fore.YELLOW + 'ID' + Style.RESET_ALL,
+                               Fore.YELLOW + 'Resolution' + Style.RESET_ALL,
+                               Fore.YELLOW + 'FPS' + Style.RESET_ALL,
+                               Fore.YELLOW + 'Audio Bitrate' + Style.RESET_ALL,
+                               Fore.YELLOW + 'Extension' + Style.RESET_ALL])
 
     for stream in video.streams:
         file_type = stream.type
@@ -70,11 +71,11 @@ def display_streams(video):
                 file_type = 'Audio+Video'
 
             print_table.add_row([Fore.CYAN + str(file_type) + Style.RESET_ALL,
-                                Fore.CYAN + str(itag) + Style.RESET_ALL,
-                                Fore.CYAN + str(resolution) + Style.RESET_ALL,
-                                Fore.CYAN + str(fps) + Style.RESET_ALL,
-                                Fore.CYAN + str(audio_bit_rate) + Style.RESET_ALL,
-                                Fore.CYAN + str(file_extension) + Style.RESET_ALL])
+                                 Fore.CYAN + str(itag) + Style.RESET_ALL,
+                                 Fore.CYAN + str(resolution) + Style.RESET_ALL,
+                                 Fore.CYAN + str(fps) + Style.RESET_ALL,
+                                 Fore.CYAN + str(audio_bit_rate) + Style.RESET_ALL,
+                                 Fore.CYAN + str(file_extension) + Style.RESET_ALL])
 
         elif file_type == 'audio':
             itag = stream.itag
@@ -85,11 +86,11 @@ def display_streams(video):
                 continue
             file_type = 'Audio'
             print_table.add_row([Fore.CYAN + str(file_type) + Style.RESET_ALL,
-                                Fore.CYAN + str(itag) + Style.RESET_ALL,
-                                Fore.CYAN + str(resolution) + Style.RESET_ALL,
-                                Fore.CYAN + str(fps) + Style.RESET_ALL,
-                                Fore.CYAN + str(audio_bit_rate) + Style.RESET_ALL,
-                                Fore.CYAN + str(file_extension) + Style.RESET_ALL])
+                                 Fore.CYAN + str(itag) + Style.RESET_ALL,
+                                 Fore.CYAN + str(resolution) + Style.RESET_ALL,
+                                 Fore.CYAN + str(fps) + Style.RESET_ALL,
+                                 Fore.CYAN + str(audio_bit_rate) + Style.RESET_ALL,
+                                 Fore.CYAN + str(file_extension) + Style.RESET_ALL])
 
     print(print_table)
 
@@ -109,7 +110,7 @@ def download_stream(streams, download_folder_path):
         print(Fore.GREEN + 'Downloaded!' + Style.RESET_ALL)
     else:
         file_name = str(streams[0].title).replace('|', '-')
-        file_path = os.path.join(download_folder_path, file_name)
+        file_path = os.path.join(download_folder_path, file_name) + '.' + streams[0].subtype
 
         print(Fore.YELLOW + 'Downloading Stream with ID: {}'.format(streams[0].itag) + Style.RESET_ALL)
         video_file_name = str(streams[0].itag)
@@ -124,16 +125,14 @@ def download_stream(streams, download_folder_path):
         print(Fore.GREEN + 'Downloaded!' + Style.RESET_ALL)
 
         print(Fore.YELLOW + 'Merging' + Style.RESET_ALL)
-        video_file = VideoFileClip(video_file_path)
-        audio_file = AudioFileClip(audio_file_path)
-        video_file.set_audio(audio_file)
-        video_file.write_videofile(file_path + '.' + streams[0].subtype)
+        subprocess.run('ffmpeg -i {} -i {} -c copy {}'.format(video_file_path, audio_file_path, file_path))
         print(Fore.GREEN + 'Completed!' + Style.RESET_ALL)
 
         os.remove(video_file_path)
         os.remove(audio_file_path)
 
     print(Fore.GREEN + 'File Available at:' + Style.RESET_ALL, file_path)
+
 
 def download_youtube_video(video, download_folder_path):
     display_information(video)
@@ -173,7 +172,8 @@ def download_youtube_video(video, download_folder_path):
 
     try:
         download_stream(streams, download_folder_path)
-    except Exception:
+    except Exception as ex:
+        print(ex)
         display_error('Some unexpected error occurred! Maybe loss of internet connection.')
 
 
